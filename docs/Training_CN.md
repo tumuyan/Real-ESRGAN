@@ -21,9 +21,12 @@
 
 2. 然后我们将 Real-ESRNet 模型作为生成器初始化，结合L1 loss、感知 loss、GAN loss 三者的参数对 Real-ESRGAN 进行训练。
 
+本文档说明较为简略，更进一步的内容可以参考[BasicSR数据准备](https://github.com/XPixelGroup/BasicSR/blob/master/docs/DatasetPreparation_CN.md)
+
 ### 准备数据集
 
 我们使用 DF2K ( DIV2K 和 Flickr2K ) + OST 数据集进行训练。只需要HR图像！<br>
+另外需要注意，HR图像长宽需要能被期望训练的缩放比所整除。
 下面是网站链接:
 1. DIV2K: http://data.vision.ee.ethz.ch/cvl/DIV2K/DIV2K_train_HR.zip
 2. Flickr2K: https://cv.snu.ac.kr/research/EDSR/Flickr2K.tar
@@ -43,7 +46,8 @@ python scripts/generate_multiscale_DF2K.py --input datasets/DF2K/DF2K_HR --outpu
 
 #### 第2步：【可选】裁切为子图像
 
-我们可以将 DF2K 图像裁切为子图像，以加快 IO 和处理速度。<br>
+裁切为子图像可以加快 IO 和处理速度。<br>
+因为 DIV2K 数据集是 2K 分辨率的 (比如: 2048x1080), 而我们在训练的时候往往并不要那么大 (常见的是 128x128 或者 192x192 的训练patch). 因此我们可以先把2K的图片裁剪成有overlap的 480x480 的子图像块. 然后再由 dataloader 从这个 480x480 的子图像块中随机crop出 128x128 或者 192x192 的训练patch.
 如果你的 IO 够好或储存空间有限，那么此步骤是可选的。<br>
 
 您可以使用脚本 [scripts/extract_subimages.py](scripts/extract_subimages.py)。这是使用示例:

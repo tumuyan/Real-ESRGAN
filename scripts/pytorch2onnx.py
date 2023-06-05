@@ -6,7 +6,8 @@ from basicsr.archs.rrdbnet_arch import RRDBNet
 
 def main(args):
     # An instance of the model
-    model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+    print("model scale:",args.scale)
+    model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=args.scale)
     if args.params:
         keyname = 'params'
     else:
@@ -31,6 +32,7 @@ if __name__ == '__main__':
         '--input', type=str, default='experiments/pretrained_models/RealESRGAN_x4plus.pth', help='Input model path')
     parser.add_argument('--output', type=str, default='realesrgan-x4.onnx', help='Output onnx path')
     parser.add_argument('--params', action='store_false', help='Use params instead of params_ema')
+    parser.add_argument('--scale', type=int, default=4, help='Scale of the model')
     args = parser.parse_args()
 
     main(args)

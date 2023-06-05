@@ -83,6 +83,14 @@ def main():
             'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-wdn-x4v3.pth',
             'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth'
         ]
+    elif 'x2' in args.model_name:  # x2 RRDBNet model
+        print('Load the model as x2 RRDBNet model:', args.model_name)
+        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=2)
+        netscale = 2
+    else:
+        print('Load the model as x4 RRDBNet model:', args.model_name)
+        model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6, num_grow_ch=32, scale=4)
+        netscale = 4
 
     # determine model paths
     if args.model_path is not None:
