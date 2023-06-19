@@ -8,6 +8,45 @@ from basicsr.utils.download_util import load_file_from_url
 from realesrgan import RealESRGANer
 from realesrgan.archs.srvgg_arch import SRVGGNetCompact
 from tqdm import *
+from PIL import Image
+import numpy as np
+
+def det_mono_img(img):
+    # 将图片转换成HSV格式
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # 计算直方图
+    hist = cv2.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+
+    # 归一化直方图
+    cv2.normalize(hist, hist, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+
+    # 计算颜色熵
+    entropy = -np.sum(hist * np.log(hist + 1e-10))
+
+    # 判断图片接近灰阶图像
+    return entropy < 2.5
+
+def save_png8(img, img_input,save_path,quality):
+    png8 = None
+    if img_input.ndim == 2:
+        img_pil = Image.fromarray(img)
+        png8 = image.convert('L')
+    else:
+        # opencv转pil，如果有alpha通道，转换时需携带alpha通道
+        if len(img.shape) == 3 and img.shape[2] == 4:
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+        else :
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(img)
+
+        # 彩色图片格式保存的图片，如果彩色分量低，则保存为灰阶图
+        if det_mono_img(img_input[:, :, :3]):
+            png8 = img_pil.convert('L')
+        else:
+            png8 = img_pil.convert('P')
+    png8.save(save_path, quality=quality)
+
 
 def main():
     """Inference demo for Real-ESRGAN.
@@ -33,6 +72,8 @@ def main():
     parser.add_argument(
         '--model_path', type=str, default=None, help='[Option] Model path. Usually, you do not need to specify it')
     parser.add_argument('--suffix', type=str, default='out', help='Suffix of the restored image')
+    parser.add_argument('--png8', action='store_true', help='Save png file as png-8')
+    parser.add_argument('--tiff',  type=int, default=8, help='Save tiff file compression, default=8, tiff=0 save file as jpg, others value refer https://www.awaresystems.be/imaging/tiff/tifftags/compression.html')
     parser.add_argument('--quality', '-q', type=int, default=90, help='jpg/webp/png output quality (10-100)')
     parser.add_argument('-t', '--tile', type=int, default=0, help='Tile size, 0 for no tile during testing')
     parser.add_argument('--tile_pad', type=int, default=10, help='Tile padding')
@@ -54,6 +95,7 @@ def main():
         '-g', '--gpu-id', type=int, default=None, help='gpu device to use (default=None) can be 0,1,2 for multi-gpu')
 
     args = parser.parse_args()
+
 
     # determine models according to model names
     args.model_name = args.model_name.split('.')[0]
@@ -186,12 +228,21 @@ def main():
               elif extension=="webp":
                   cv2.imwrite(save_path, output,[cv2.IMWRITE_WEBP_QUALITY, quality])
               elif extension=="png":
-                  quality = int( 8.4116+quality*0.0707-quality*quality*0.0015)
-                  cv2.imwrite(save_path, output,[cv2.IMWRITE_PNG_QUALITY, quality])
+                  if args.png8:
+                    #   print("png-8")
+                      save_png8(output,img,save_path,quality)
+                  else:
+                      quality = int( 8.4116+quality*0.0707-quality*quality*0.0015)
+                      cv2.imwrite(save_path, output,[cv2.IMWRITE_PNG_COMPRESSION, quality])
               elif extension=="tiff" and  quality<100:
-                  extension = "jpg"
-                  save_path = os.path.join(args.output, f'{imgname}.{extension}')
-                  cv2.imwrite(save_path, output,[cv2.IMWRITE_JPEG_QUALITY, quality])
+                  if args.tiff==0:
+                      extension = "jpg"
+                      save_path = os.path.join(args.output, f'{imgname}.{extension}')
+                      cv2.imwrite(save_path, output,[cv2.IMWRITE_JPEG_QUALITY, quality])
+                  else:
+                      quality = int( 8.4116+quality*0.0707-quality*quality*0.0015)
+                      cv2.imwrite(save_path, output, [cv2.IMWRITE_TIFF_COMPRESSION, args.tiff])
+
               else:
                   cv2.imwrite(save_path, output)
           else:
@@ -200,7 +251,7 @@ def main():
           size_out = os.path.getsize(save_path)
           total_input=total_input+size_in
           total_output=total_output+size_out
-          print(os.path.basename(path),"\toutput/input:" ,round(size_out/size_in,2),"\ttotal output/input:",round(total_output/total_input,2))
+          print(os.path.basename(path),"\tout/in:" ,round(size_out/size_in,2),"\ttotal out/in:",round(total_output/total_input,2))
 
 if __name__ == '__main__':
     main()
